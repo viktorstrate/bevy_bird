@@ -4,10 +4,12 @@ use bevy::{
     reflect::TypeUuid,
     render::{
         mesh::Indices,
-        render_asset::{RenderAsset, RenderAssets},
+        render_asset::{PrepareAssetError, RenderAsset, RenderAssets},
         render_resource::{
-            BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor, PrimitiveTopology,
-            RenderPipelineDescriptor, VertexAttribute, VertexBufferLayout, VertexFormat,
+            BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor,
+            BindGroupLayoutEntry, BindingResource, BindingType, PrimitiveTopology,
+            RenderPipelineDescriptor, SamplerBindingType, ShaderStages, TextureSampleType,
+            TextureViewDimension, VertexAttribute, VertexBufferLayout, VertexFormat,
             VertexStepMode,
         },
         renderer::RenderDevice,
@@ -24,6 +26,7 @@ fn main() {
         .add_plugin(HillsMaterialPlugin)
         .add_startup_system(spawn_hills)
         .add_startup_system(asset_server_changes)
+        .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::rgb(1., 1., 1.)))
         .run();
 }
@@ -34,17 +37,15 @@ fn asset_server_changes(asset_server: ResMut<AssetServer>) {
     let _ = asset_server.load::<Shader, _>("shaders/hills.wgsl");
 }
 
+// Add the hills object to the world
 fn spawn_hills(
     mut commands: Commands,
-    // We will add a new Mesh for the star being created
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<HillsMaterial>>,
     asset_server: ResMut<AssetServer>,
 ) {
-    let mut hills_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
-    const STEPS: i32 = 50;
-
+    // Generate vertex positions
+    const STEPS: i32 = 100;
     let mut v_pos = vec![];
 
     for i in 0..STEPS {
@@ -56,9 +57,7 @@ fn spawn_hills(
         ]);
     }
 
-    // Set the position attribute
-    hills_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
-
+    // Generate indices for vertex positions
     let mut indices = vec![];
     for i in 0..(STEPS - 1) {
         let x = (i * 2) as u32;
@@ -66,18 +65,24 @@ fn spawn_hills(
         indices.extend_from_slice(&[x, x + 2, x + 3]);
     }
 
-    // indices = vec![0, 2, 1, 0, 3, 2];
+    // Save vertex data to a new mesh
+    let mut hills_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    hills_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
     hills_mesh.set_indices(Some(Indices::U32(indices)));
 
+    // Make a new custom HillsMaterial to use with the mesh.
+    // This material also specifies the structure of the vertices (vec2 for position and no normal or uv maps)
     let hills_material = HillsMaterial {
         texture: asset_server.load("textures/paper-seamless.png"),
     };
 
+    // Add the mesh to the world
     commands.spawn_bundle(MaterialMesh2dBundle {
         mesh: meshes.add(hills_mesh).into(),
-        // mesh: meshes.add(mesh_quad).into(),
-        transform: Transform::default().with_scale(Vec3::splat(128.)),
         material: materials.add(hills_material),
+        transform: Transform::default()
+            .with_scale(Vec3::splat(256.))
+            .with_translation(Vec3::new(0., -256., 0.)),
         ..Default::default()
     });
 
@@ -85,6 +90,7 @@ fn spawn_hills(
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 }
 
+// Plugin to register the custom HillsMaterial to the world
 struct HillsMaterialPlugin;
 
 impl Plugin for HillsMaterialPlugin {
@@ -96,11 +102,12 @@ impl Plugin for HillsMaterialPlugin {
 #[derive(Debug, Clone, TypeUuid)]
 #[uuid = "f781e582-4fd9-4a01-b870-1bb20bdb8c34"]
 struct HillsMaterial {
+    // Texture to blend into the background
     texture: Handle<Image>,
 }
 
+/// Custom material inspired by builtin [`ColorMaterial`]
 struct GpuHillsMaterial {
-    // buffer: Buffer,
     bind_group: BindGroup,
 }
 
@@ -120,7 +127,7 @@ impl RenderAsset for HillsMaterial {
     }
 
     fn prepare_asset(
-        extracted_asset: Self::ExtractedAsset,
+        material: Self::ExtractedAsset,
         (render_device, hills_pipeline, gpu_images): &mut bevy::ecs::system::SystemParamItem<
             Self::Param,
         >,
@@ -128,20 +135,22 @@ impl RenderAsset for HillsMaterial {
         Self::PreparedAsset,
         bevy::render::render_asset::PrepareAssetError<Self::ExtractedAsset>,
     > {
+        let (texture_view, sampler) = if let Some(gpu_image) = gpu_images.get(&material.texture) {
+            (&gpu_image.texture_view, &gpu_image.sampler)
+        } else {
+            return Err(PrepareAssetError::RetryNextUpdate(material));
+        };
+
         let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
             entries: &[
-                // BindGroupEntry {
-                //     binding: 0,
-                //     resource: buffer.as_entire_binding(),
-                // },
-                // BindGroupEntry {
-                //     binding: 1,
-                //     resource: BindingResource::TextureView(texture_view),
-                // },
-                // BindGroupEntry {
-                //     binding: 2,
-                //     resource: BindingResource::Sampler(sampler),
-                // },
+                BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::TextureView(texture_view),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::Sampler(sampler),
+                },
             ],
             label: Some("hills_material_bind_group"),
             layout: &hills_pipeline.material2d_layout,
@@ -151,6 +160,7 @@ impl RenderAsset for HillsMaterial {
     }
 }
 
+// A SpecializedMaterial2d is used rather than the simpler Material2d, since the mesh uses a non-standard vertex buffer layout
 impl SpecializedMaterial2d for HillsMaterial {
     fn bind_group(
         render_asset: &<Self as bevy::render::render_asset::RenderAsset>::PreparedAsset,
@@ -163,7 +173,26 @@ impl SpecializedMaterial2d for HillsMaterial {
     ) -> bevy::render::render_resource::BindGroupLayout {
         render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             label: Some("hills_material_layout"),
-            entries: &[],
+            entries: &[
+                // Texture
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Texture {
+                        multisampled: false,
+                        sample_type: TextureSampleType::Float { filterable: true },
+                        view_dimension: TextureViewDimension::D2,
+                    },
+                    count: None,
+                },
+                // Texture Sampler
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
         })
     }
 
