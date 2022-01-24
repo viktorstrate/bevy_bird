@@ -1,7 +1,10 @@
-use bevy::{log, prelude::*, sprite::MaterialMesh2dBundle};
+#![feature(let_else)]
+
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use hills::HillsMaterial;
 
 mod hills;
+mod player;
 
 /// This example shows how to manually render 2d items using "mid level render apis" with a custom pipeline for 2d meshes
 /// It doesn't use the [`Material2d`] abstraction, but changes the vertex buffer to include vertex color
@@ -10,6 +13,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(hills::HillsMaterialPlugin)
+        .add_plugin(player::PlayerPlugin)
         .add_startup_system(setup_world)
         .add_startup_system(asset_server_changes)
         .add_system(hills_system)
@@ -17,8 +21,8 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::rgb(1., 1., 1.)))
         // debug
-        // .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
-        // .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .run();
 }
 
@@ -70,8 +74,8 @@ fn hills_system(
     }
 
     if let Some((&last_trans, _)) = last_hill {
+        // Spawn new hills to the right
         if camera_trans.translation.x > last_trans.translation.x - window.width() {
-            log::info!("Spawning next hill");
             spawn_hill(
                 Transform::default()
                     .with_scale(Vec3::splat(256.))
@@ -82,7 +86,7 @@ fn hills_system(
             );
         }
     } else {
-        log::info!("Spawning first hill");
+        // If no hills were found, spawn initial ones
         for i in 0..(window.width() as i32 / 256 * 2) {
             spawn_hill(
                 Transform::default()
@@ -95,9 +99,9 @@ fn hills_system(
         }
     }
 
+    // Despawn hills to the left
     if let Some((&first_trans, first_entity)) = first_hill {
         if camera_trans.translation.x > first_trans.translation.x + window.width() {
-            log::info!("Despawning hill");
             commands.entity(first_entity).despawn();
         }
     }
@@ -128,13 +132,21 @@ fn spawn_hill(
 
 fn camera_movement_system(
     mut cameras: Query<&mut Transform, With<Camera>>,
-    time: Res<Time>,
+    player: Query<&Transform, (With<player::PlayerComponent>, Without<Camera>)>,
+    // time: Res<Time>,
     windows: Res<Windows>,
 ) {
     let window = windows.get_primary().unwrap();
 
+    let Ok(player) = player.get_single() else {
+        return;
+    };
+
     for mut cam in cameras.iter_mut() {
-        cam.translation.x += 100. * time.delta_seconds();
-        cam.translation.y = window.height() / 2. - 256.;
+        // cam.translation.x += 100. * time.delta_seconds();
+        cam.translation.x = player.translation.x;
+        cam.translation.y = player.translation.y;
+
+        cam.translation.y = cam.translation.y.max(window.height() / 2. - 256.);
     }
 }

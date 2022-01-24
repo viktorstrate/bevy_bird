@@ -5,40 +5,8 @@ version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies.bevy]
-version = "0.6"
-
-# Disable the default features if there are any that you do not want
-default-features = false
-features = [
-  # These are the default features:
-  # (keep whichever you like)
-  "render",
-  "bevy_winit",
-  "bevy_gilrs",
-  "bevy_audio",
-  "png",
-  "vorbis",
-  "x11",
-  "filesystem_watcher", #
-  # Disabled features
-  # "hdr",
-  # "bmp",
-  # "tga",
-  # "dds",
-  # "jpeg",
-  # "wav"
-  # "flac",
-  # "mp3",
-  # "subpixel_glyph_atlas",
-  # "dynamic",
-  # "serialize",
-  # "trace",
-  # "trace_tracy",
-  # "trace_chrome",
-  # "wgpu_trace",
-  # "wayland"
-]
+[dependencies]
+bevy = "0.6"
 
 # Enable only a small amount of optimization in debug mode
 [profile.dev]
