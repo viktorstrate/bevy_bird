@@ -247,6 +247,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_bird"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_core"
 version = "0.6.0"
 source = "git+https://github.com/bevyengine/bevy#f3de12bc5e03c58a9b863943b8db84a321422bec"
@@ -332,13 +339,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "bevy_game_test"
-version = "0.1.0"
-dependencies = [
- "bevy",
 ]
 
 [[package]]

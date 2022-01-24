@@ -1,10 +1,9 @@
 // Import the standard 2d mesh uniforms and set their bind groups
 #import bevy_sprite::mesh2d_view_bind_group
-[[group(0), binding(0)]]
-var<uniform> view: View;
 #import bevy_sprite::mesh2d_struct
-[[group(1), binding(0)]]
-var<uniform> mesh: Mesh2d;
+
+[[group(0), binding(0)]] var<uniform> view: View;
+[[group(2), binding(0)]] var<uniform> mesh: Mesh2d;
 
 // The structure of the vertex buffer is as specified in `specialize()`
 struct Vertex {
@@ -26,7 +25,7 @@ struct VertexOutput {
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
-    var pos = vertex.position;
+    var pos = vertex.position.xy;
 
     // Project the world position of the mesh into screen position
     out.clip_position = view.view_proj * mesh.model * vec4<f32>(pos, 1.0, 1.0);
