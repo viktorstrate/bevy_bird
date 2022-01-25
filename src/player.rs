@@ -14,8 +14,8 @@ impl Plugin for PlayerPlugin {
 
 #[derive(Component)]
 pub struct PlayerComponent {
-    velocity: Vec2,
-    diving: bool,
+    pub velocity: Vec2,
+    pub diving: bool,
 }
 
 impl Default for PlayerComponent {

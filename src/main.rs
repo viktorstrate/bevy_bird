@@ -142,21 +142,30 @@ fn spawn_hill(
 
 fn camera_movement_system(
     mut cameras: Query<&mut Transform, With<Camera>>,
-    player: Query<&Transform, (With<player::PlayerComponent>, Without<Camera>)>,
-    // time: Res<Time>,
+    player: Query<(&Transform, &player::PlayerComponent), (Without<Camera>)>,
+    time: Res<Time>,
     windows: Res<Windows>,
 ) {
     let window = windows.get_primary().unwrap();
 
-    let Ok(player) = player.get_single() else {
+    let Ok((player_trans, player)) = player.get_single() else {
         return;
     };
 
     for mut cam in cameras.iter_mut() {
-        // cam.translation.x += 100. * time.delta_seconds();
-        cam.translation.x = player.translation.x;
-        cam.translation.y = player.translation.y;
+        let desired_scale = ((player.velocity.x + 80.) / 400. + 0.2).min(1.6);
 
-        cam.translation.y = cam.translation.y.max(window.height() / 2. - 256.);
+        let dist = time.delta_seconds().min(1.);
+        let new_scale = cam.scale.x * (1. - dist) + desired_scale * dist;
+
+        cam.scale.x = new_scale;
+        cam.scale.y = new_scale;
+
+        cam.translation.x = player_trans.translation.x;
+        cam.translation.y = player_trans
+            .translation
+            .y
+            .min(256. / new_scale)
+            .max((window.height() / 2. - 256. / new_scale) * new_scale);
     }
 }
