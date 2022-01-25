@@ -16,14 +16,24 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
         .add_startup_system(setup_world)
         .add_startup_system(asset_server_changes)
-        .add_system(hills_system)
-        .add_system(camera_movement_system)
+        .add_system(hills_system.after(GameSystems::Camera))
+        .add_system(
+            camera_movement_system
+                .label(GameSystems::Camera)
+                .after(GameSystems::PlayerMovement),
+        )
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::rgb(1., 1., 1.)))
         // debug
         .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
         .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .run();
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, SystemLabel)]
+pub enum GameSystems {
+    PlayerMovement,
+    Camera,
 }
 
 fn asset_server_changes(asset_server: ResMut<AssetServer>) {

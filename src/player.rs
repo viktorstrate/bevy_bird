@@ -1,12 +1,14 @@
 use bevy::prelude::*;
 
+use crate::GameSystems;
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_startup_system(make_player);
-        app.add_system(player_input);
-        app.add_system(player_system);
+        app.add_system(player_input.before(GameSystems::PlayerMovement));
+        app.add_system(player_system.label(GameSystems::PlayerMovement));
     }
 }
 
@@ -25,11 +27,11 @@ impl Default for PlayerComponent {
     }
 }
 
-fn make_player(mut commands: Commands) {
+fn make_player(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
+            texture: asset_server.load("textures/player.png"),
             sprite: Sprite {
-                color: Color::rgb(0.25, 0.25, 0.75),
                 custom_size: Some(Vec2::new(50.0, 50.0)),
                 ..Default::default()
             },
@@ -55,14 +57,16 @@ fn player_system(mut player: Query<(&mut Transform, &mut PlayerComponent)>, time
     for (mut transform, mut player) in player.iter_mut() {
         player.velocity.y -= if player.diving { 250. } else { 50. } * time.delta_seconds();
 
-        transform.translation.y += player.velocity.y * time.delta_seconds();
-        transform.translation.x += player.velocity.x * time.delta_seconds();
+        let mut new_transform = transform.clone();
 
-        let ground_normal = ground_normal(transform.translation.x);
-        let ground_y = ground_y(transform.translation.x) + 25.;
+        new_transform.translation.y += player.velocity.y * time.delta_seconds();
+        new_transform.translation.x += player.velocity.x * time.delta_seconds();
 
-        if transform.translation.y < ground_y {
-            transform.translation.y = ground_y;
+        let ground_normal = ground_normal(new_transform.translation.x);
+        let ground_y = ground_y(new_transform.translation.x) + 16.;
+
+        if new_transform.translation.y < ground_y {
+            new_transform.translation.y = ground_y;
 
             let fwd = Vec2::new(ground_normal.y, -ground_normal.x);
             let mut new_velocity =
@@ -73,16 +77,19 @@ fn player_system(mut player: Query<(&mut Transform, &mut PlayerComponent)>, time
             player.velocity = new_velocity;
         }
 
-        if transform.translation.y > 360. && player.velocity.y > 0. {
+        if new_transform.translation.y > 360. && player.velocity.y > 0. {
             player.velocity.y -= 300. * time.delta_seconds();
         }
 
-        transform.rotation = Quat::from_euler(
+        new_transform.rotation = Quat::from_euler(
             EulerRot::XYZ,
             0.,
             0.,
             player.velocity.y.atan2(player.velocity.x),
         );
+
+        transform.translation = new_transform.translation;
+        transform.rotation = new_transform.rotation;
     }
 }
 
