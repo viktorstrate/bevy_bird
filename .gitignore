@@ -1,1 +1,4 @@
 /target
+/web/target
+/web/assets
+node_modules

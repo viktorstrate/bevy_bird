@@ -1,0 +1,15 @@
+{
+  "name": "bevy_bird",
+  "version": "0.1.0",
+  "scripts": {
+    "deploy": "make web && gh-pages -d web"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viktorstrate/bevy_bird.git"
+  },
+  "homepage": "https://viktorstrate.github.io/bevy_bird",
+  "devDependencies": {
+    "gh-pages": "^3.2.3"
+  }
+}
