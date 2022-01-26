@@ -4,6 +4,7 @@ use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use hills::HillsMaterial;
 
 mod background;
+mod bevy_player;
 mod hills;
 mod player;
 
@@ -148,9 +149,9 @@ fn camera_movement_system(
 ) {
     let window = windows.get_primary().unwrap();
 
-    let Ok((player_trans, player)) = player.get_single() else {
-        return;
-    };
+    let (player_trans, player) = player
+        .get_single()
+        .expect("only one player component should exist");
 
     for mut cam in cameras.iter_mut() {
         let desired_scale = ((player.velocity.x + 80.) / 400. + 0.2).min(1.6);
