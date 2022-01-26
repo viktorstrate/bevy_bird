@@ -58,29 +58,4 @@ fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
   color = color + (textureSample(texture, texture_sampler, texture_uv).rgb - 0.5);
 
   return vec4<f32>(color.rgb, 1.);
-    // let tau = 6.28318530718;
-    // let uv = vec2<f32>((in.pos.x + 500.) / 2000., (in.pos.y + 200.) / 200.);
-
-
-    // // Background colors
-    // let RED = vec3<f32>(0.67451, 0.17647, 0.07843);
-    // let GREEN = vec3<f32>(0.45882, 0.61569, 0.02745);
-
-    // let mask = sin(in.height * 14. + in.pos.x * tau);
-    // let s = smoothStep(-0.1, 0.1, mask);
-    // var color = RED * s + (1.0-s) * GREEN;
-
-    // // Top shading
-    // color = color + vec3<f32>(pow((1.-in.height), 3.0) / 2.);
-
-    // // Dark border
-    // if (in.height < 0.008) {
-    //     color = vec3<f32>(0.05, 0.03, 0.01);
-    // }
-
-    // // Texture overlay
-    // let texture_uv = (in.pos + 2.) % vec2<f32>(1.);
-    // color = color * textureSample(texture, texture_sampler, texture_uv / vec2<f32>(2.)).rgb;
-
-    // return vec4<f32>(color, 1.);
 }
