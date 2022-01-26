@@ -55,7 +55,7 @@ fn ground_normal(x: f32) -> Vec2 {
 
 fn player_system(mut player: Query<(&mut Transform, &mut PlayerComponent)>, time: Res<Time>) {
     for (mut transform, mut player) in player.iter_mut() {
-        player.velocity.y -= if player.diving { 250. } else { 50. } * time.delta_seconds();
+        player.velocity.y -= if player.diving { 400. } else { 100. } * time.delta_seconds();
 
         let mut new_transform = transform.clone();
 

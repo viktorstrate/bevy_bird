@@ -3,79 +3,63 @@ use bevy::{
     prelude::*,
     reflect::TypeUuid,
     render::{
-        mesh::Indices,
         render_asset::{PrepareAssetError, RenderAsset, RenderAssets},
         render_resource::{
             BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor,
-            BindGroupLayoutEntry, BindingResource, BindingType, PrimitiveTopology,
-            RenderPipelineDescriptor, SamplerBindingType, ShaderStages, TextureSampleType,
-            TextureViewDimension, VertexAttribute, VertexBufferLayout, VertexFormat,
-            VertexStepMode,
+            BindGroupLayoutEntry, BindingResource, BindingType, SamplerBindingType, ShaderStages,
+            TextureSampleType, TextureViewDimension,
         },
         renderer::RenderDevice,
     },
-    sprite::{Material2dPipeline, Material2dPlugin, SpecializedMaterial2d},
+    sprite::{Material2d, Material2dPipeline, Material2dPlugin, MaterialMesh2dBundle},
 };
 
-pub fn hills_mesh() -> Mesh {
-    // Generate vertex positions
-    const STEPS: i32 = 75;
-    let mut v_pos = vec![];
+pub struct BackgroundPlugin;
 
-    for i in 0..=STEPS {
-        let x_offset = (i as f32) / (STEPS as f32) - 0.5;
-        v_pos.push([x_offset, 0.]);
-        v_pos.push([
-            x_offset,
-            (i as f32 / (STEPS as f32) * std::f32::consts::TAU).sin() * 0.1 + 1.,
-        ]);
-    }
-
-    // Generate indices for vertex positions
-    let mut indices = vec![];
-    for i in 0..=(STEPS - 1) {
-        let x = (i * 2) as u32;
-        indices.extend_from_slice(&[x, x + 3, x + 1]);
-        indices.extend_from_slice(&[x, x + 2, x + 3]);
-    }
-
-    // Save vertex data to a new mesh
-    let mut hills_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    hills_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
-    hills_mesh.set_indices(Some(Indices::U32(indices)));
-
-    hills_mesh
-}
-
-// Plugin to register the custom HillsMaterial to the world
-pub struct HillsMaterialPlugin;
-
-impl Plugin for HillsMaterialPlugin {
+impl Plugin for BackgroundPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(Material2dPlugin::<HillsMaterial>::default());
+        app.add_plugin(Material2dPlugin::<BackgroundMaterial>::default());
+        app.add_startup_system(setup_background);
     }
 }
 
-/// Custom material inspired by builtin [`ColorMaterial`]
+fn setup_background(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<BackgroundMaterial>>,
+    asset_server: ResMut<AssetServer>,
+) {
+    let background_material = BackgroundMaterial {
+        texture: asset_server.load("textures/paint-seamless.png"),
+    };
+
+    commands.spawn_bundle(MaterialMesh2dBundle {
+        mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
+        material: materials.add(background_material),
+        transform: Transform::from_xyz(0., 0., -1.).with_scale(Vec3::splat(2.)),
+        ..Default::default()
+    });
+}
+
 #[derive(Debug, Clone, TypeUuid)]
-#[uuid = "f781e582-4fd9-4a01-b870-1bb20bdb8c34"]
-pub struct HillsMaterial {
+#[uuid = "a1f72471-e24f-485d-bdfc-421f4dd32e20"]
+pub struct BackgroundMaterial {
     // Texture to blend into the background
     pub texture: Handle<Image>,
 }
 
-pub struct GpuHillsMaterial {
+pub struct GpuBackgroundMaterial {
     bind_group: BindGroup,
 }
 
-impl RenderAsset for HillsMaterial {
-    type ExtractedAsset = HillsMaterial;
+impl RenderAsset for BackgroundMaterial {
+    type ExtractedAsset = BackgroundMaterial;
 
-    type PreparedAsset = GpuHillsMaterial;
+    type PreparedAsset = GpuBackgroundMaterial;
 
     type Param = (
         SRes<RenderDevice>,
-        SRes<Material2dPipeline<HillsMaterial>>,
+        SRes<Material2dPipeline<BackgroundMaterial>>,
         SRes<RenderAssets<Image>>,
     );
 
@@ -85,7 +69,7 @@ impl RenderAsset for HillsMaterial {
 
     fn prepare_asset(
         material: Self::ExtractedAsset,
-        (render_device, hills_pipeline, gpu_images): &mut bevy::ecs::system::SystemParamItem<
+        (render_device, background_pipeline, gpu_images): &mut bevy::ecs::system::SystemParamItem<
             Self::Param,
         >,
     ) -> Result<
@@ -109,16 +93,15 @@ impl RenderAsset for HillsMaterial {
                     resource: BindingResource::Sampler(sampler),
                 },
             ],
-            label: Some("hills_material_bind_group"),
-            layout: &hills_pipeline.material2d_layout,
+            label: Some("background_material_bind_group"),
+            layout: &background_pipeline.material2d_layout,
         });
 
-        Ok(GpuHillsMaterial { bind_group })
+        Ok(GpuBackgroundMaterial { bind_group })
     }
 }
 
-// A SpecializedMaterial2d is used rather than the simpler Material2d, since the mesh uses a non-standard vertex buffer layout
-impl SpecializedMaterial2d for HillsMaterial {
+impl Material2d for BackgroundMaterial {
     fn bind_group(
         render_asset: &<Self as bevy::render::render_asset::RenderAsset>::PreparedAsset,
     ) -> &bevy::render::render_resource::BindGroup {
@@ -129,7 +112,7 @@ impl SpecializedMaterial2d for HillsMaterial {
         render_device: &bevy::render::renderer::RenderDevice,
     ) -> bevy::render::render_resource::BindGroupLayout {
         render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("hills_material_layout"),
+            label: Some("background_material_layout"),
             entries: &[
                 // Texture
                 BindGroupLayoutEntry {
@@ -154,29 +137,10 @@ impl SpecializedMaterial2d for HillsMaterial {
     }
 
     fn vertex_shader(asset_server: &AssetServer) -> Option<Handle<Shader>> {
-        Some(asset_server.load("shaders/hills.wgsl"))
+        Some(asset_server.load("shaders/background.wgsl"))
     }
 
     fn fragment_shader(asset_server: &AssetServer) -> Option<Handle<Shader>> {
-        Some(asset_server.load("shaders/hills.wgsl"))
-    }
-
-    type Key = ();
-    fn key(_material: &<Self as RenderAsset>::PreparedAsset) -> Self::Key {}
-
-    fn specialize(_key: Self::Key, descriptor: &mut RenderPipelineDescriptor) {
-        let vertex_attributes = vec![VertexAttribute {
-            format: VertexFormat::Float32x2,
-            offset: 0,
-            shader_location: 0,
-        }];
-
-        let vertex_array_stride = 8;
-
-        descriptor.vertex.buffers = vec![VertexBufferLayout {
-            array_stride: vertex_array_stride,
-            step_mode: VertexStepMode::Vertex,
-            attributes: vertex_attributes,
-        }];
+        Some(asset_server.load("shaders/background.wgsl"))
     }
 }

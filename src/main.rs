@@ -3,6 +3,7 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use hills::HillsMaterial;
 
+mod background;
 mod hills;
 mod player;
 
@@ -14,6 +15,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(hills::HillsMaterialPlugin)
         .add_plugin(player::PlayerPlugin)
+        .add_plugin(background::BackgroundPlugin)
         .add_startup_system(setup_world)
         .add_startup_system(asset_server_changes)
         .add_system(hills_system.after(GameSystems::Camera))
@@ -26,7 +28,7 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(1., 1., 1.)))
         // debug
         .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
-        .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
+        // .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .run();
 }
 
@@ -38,8 +40,6 @@ pub enum GameSystems {
 
 fn asset_server_changes(asset_server: ResMut<AssetServer>) {
     asset_server.watch_for_changes().unwrap();
-
-    // let _ = asset_server.load::<Shader, _>("shaders/hills.wgsl");
 }
 
 fn setup_world(mut commands: Commands) {
@@ -142,7 +142,7 @@ fn spawn_hill(
 
 fn camera_movement_system(
     mut cameras: Query<&mut Transform, With<Camera>>,
-    player: Query<(&Transform, &player::PlayerComponent), (Without<Camera>)>,
+    player: Query<(&Transform, &player::PlayerComponent), Without<Camera>>,
     time: Res<Time>,
     windows: Res<Windows>,
 ) {
