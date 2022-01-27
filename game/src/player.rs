@@ -98,12 +98,16 @@ fn player_system(mut player: Query<(&mut Transform, &mut PlayerComponent)>, time
     transform.rotation = new_transform.rotation;
 }
 
-fn player_input(keys: Res<Input<KeyCode>>, mut player: Query<&mut PlayerComponent>) {
+fn player_input(
+    mut player: Query<&mut PlayerComponent>,
+    keys: Res<Input<KeyCode>>,
+    touches: Res<Touches>,
+) {
     let mut player = player
         .get_single_mut()
         .expect("only one player component should exist");
 
-    player.diving = keys.pressed(KeyCode::Space);
+    player.diving = keys.pressed(KeyCode::Space) || touches.iter().next().is_some();
 
     if keys.just_pressed(KeyCode::B) {
         player.bevy_mode = !player.bevy_mode;

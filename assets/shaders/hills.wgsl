@@ -50,15 +50,13 @@ struct FragmentInput {
 /// Entry point for the fragment shader
 [[stage(fragment)]]
 fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
-    let tau = 6.28318530718;
-    let uv = vec2<f32>((in.pos.x + 500.) / 2000., (in.pos.y + 200.) / 200.);
-
+    let TAU = 6.28318530718;
 
     // Background colors
     let RED = vec3<f32>(0.67451, 0.17647, 0.07843);
     let GREEN = vec3<f32>(0.45882, 0.61569, 0.02745);
 
-    let mask = sin(in.height * 14. + in.pos.x * tau);
+    let mask = sin(in.height * 14. + in.pos.x * TAU);
     let s = smoothStep(-0.1, 0.1, mask);
     var color = RED * s + (1.0-s) * GREEN;
 

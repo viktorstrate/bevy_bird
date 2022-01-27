@@ -3,15 +3,8 @@ edition = "2021"
 name = "bevy_bird"
 version = "0.1.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = ["./game", "./ios"]
 
 [dependencies]
-bevy = {git = "https://github.com/bevyengine/bevy"}
-
-# Enable only a small amount of optimization in debug mode
-[profile.dev]
-opt-level = 1
-
-# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
-[profile.dev.package."*"]
-opt-level = 3
+bevy_bird_lib = {path = "./game"}
