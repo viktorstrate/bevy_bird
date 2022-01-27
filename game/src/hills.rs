@@ -17,6 +17,10 @@ use bevy::{
     sprite::{Material2dPipeline, Material2dPlugin, SpecializedMaterial2d},
 };
 
+pub fn hills_height(x: f32, flipped: bool) -> f32 {
+    (x * std::f32::consts::TAU).sin() * 0.1 * if flipped { -1. } else { 1. } + 1.
+}
+
 pub fn hills_mesh() -> Mesh {
     // Generate vertex positions
     const STEPS: i32 = 75;
@@ -25,10 +29,7 @@ pub fn hills_mesh() -> Mesh {
     for i in 0..=STEPS {
         let x_offset = (i as f32) / (STEPS as f32) - 0.5;
         v_pos.push([x_offset, 0.]);
-        v_pos.push([
-            x_offset,
-            (i as f32 / (STEPS as f32) * std::f32::consts::TAU).sin() * 0.1 + 1.,
-        ]);
+        v_pos.push([x_offset, hills_height((i as f32) / (STEPS as f32), false)]);
     }
 
     // Generate indices for vertex positions

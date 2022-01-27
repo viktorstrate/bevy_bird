@@ -96,10 +96,12 @@ fn hills_system(
     } else {
         // If no hills were found, spawn initial ones
         for i in 0..(window.width() as i32 / 256 * 2) {
+            let offset = window.width() - (window.width() % 256.);
+
             spawn_hill(
                 Transform::default()
                     .with_scale(Vec3::splat(256.))
-                    .with_translation(Vec3::new((i as f32) * 256. - window.width(), -256., 0.)),
+                    .with_translation(Vec3::new((i as f32) * 256. - offset, -256., 0.)),
                 &mut commands,
                 &mut assets,
                 &asset_server,

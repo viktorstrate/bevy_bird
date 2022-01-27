@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{bevy_player::BevyPlayerPlugin, GameSystems};
+use crate::{bevy_player::BevyPlayerPlugin, hills::hills_height, GameSystems};
 
 pub struct PlayerPlugin;
 
@@ -45,12 +45,11 @@ fn make_player(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn ground_y(x: f32) -> f32 {
-    return ((x / 256. * std::f32::consts::TAU + std::f32::consts::PI).sin() * 0.1 + 1.) * 256.
-        - 256.;
+    return hills_height(x / 256., true) * 256. - 256.;
 }
 
 fn ground_normal(x: f32) -> Vec2 {
-    let derivative = (x / 256. * std::f32::consts::TAU + std::f32::consts::PI).cos();
+    let derivative = (x / 256. * std::f32::consts::TAU).cos() * -1.;
 
     let normal = Vec2::new(-derivative, 1.).normalize();
     return normal;
