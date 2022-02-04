@@ -1,6 +1,6 @@
 #![feature(let_else)]
 
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{asset::AssetServerSettings, prelude::*, sprite::MaterialMesh2dBundle};
 use hills::HillsMaterial;
 
 mod background;
@@ -10,12 +10,15 @@ mod player;
 
 pub fn start_game() {
     App::new()
+        .insert_resource(AssetServerSettings {
+            watch_for_changes: true,
+            ..Default::default()
+        })
         .add_plugins(DefaultPlugins)
         .add_plugin(hills::HillsMaterialPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(background::BackgroundPlugin)
         .add_startup_system(setup_world)
-        .add_startup_system(asset_server_changes)
         .add_system(hills_system.after(GameSystems::Camera))
         .add_system(
             camera_movement_system
@@ -34,10 +37,6 @@ pub fn start_game() {
 pub enum GameSystems {
     PlayerMovement,
     Camera,
-}
-
-fn asset_server_changes(asset_server: ResMut<AssetServer>) {
-    asset_server.watch_for_changes().unwrap();
 }
 
 fn setup_world(mut commands: Commands) {
